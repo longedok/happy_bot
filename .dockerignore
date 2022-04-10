@@ -1,0 +1,5 @@
+*.db
+.mypy_cache/
+.env
+__pycache__/
+

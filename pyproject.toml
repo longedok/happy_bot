@@ -1,0 +1,24 @@
+[tool.poetry]
+name = "happy_bot"
+version = "0.1.0-alpha.0"
+description = ""
+authors = ["Yauheni Kartavykh <longedok@gmail.com>"]
+
+[tool.poetry.dependencies]
+python = "^3.9"
+requests = "^2.27.1"
+redis = "^4.2.0"
+
+[tool.poetry.dev-dependencies]
+mypy = "^0.800"
+pytest = "^6.2.2"
+pytest-mock = "^3.5.1"
+requests-mock = "^1.8.0"
+ipython = "^7.20.0"
+isort = "^5.9.3"
+black = "^21.9b0"
+bump2version = "^1.0.1"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
