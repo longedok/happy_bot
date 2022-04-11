@@ -8,8 +8,9 @@ import aioredis
 
 from bot import Bot
 from pubsub import RedisPubSub
-from telegram_client import Client
+from telegram_client import TelegramClient
 from utils.logging import CustomFormatter
+from webapp_client import WebappClient
 
 
 def init_logging() -> None:
@@ -26,12 +27,13 @@ def init_logging() -> None:
 async def main() -> None:
     init_logging()
 
-    client = Client()
+    telegram_client = TelegramClient()
+    webapp_client = WebappClient()
     redis = aioredis.from_url("redis://redis", encoding="utf-8")
 
-    pubsub = RedisPubSub(client, redis)
+    pubsub = RedisPubSub(telegram_client, redis)
 
-    bot = Bot(client)
+    bot = Bot(telegram_client, webapp_client)
 
     await asyncio.gather(
         bot.start(),

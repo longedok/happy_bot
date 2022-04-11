@@ -10,6 +10,7 @@ requests = "^2.27.1"
 redis = "^4.2.0"
 httpx = "^0.22.0"
 aioredis = {version = "^2.0.1", extras = ["hiredis"]}
+SQLAlchemy = "^1.4.35"
 
 [tool.poetry.dev-dependencies]
 mypy = "^0.800"

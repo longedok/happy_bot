@@ -9,10 +9,11 @@ from bot_context import BotContext
 from command_handlers import CommandHandlerRegistry
 from entities import CallbackQuery, Command, Message
 from exceptions import ValidationError
+from webapp_client import WebappClient
 
 if TYPE_CHECKING:
     from entities import ForwardFromChat
-    from telegram_client import Client as TelegramClient
+    from telegram_client import TelegramClient as TelegramClient
 
 logger = logging.getLogger(__name__)
 
@@ -20,12 +21,15 @@ logger = logging.getLogger(__name__)
 class Bot:
     USERNAME = os.environ.get("BOT_USERNAME", "gcservantbot")
 
-    def __init__(self, client: TelegramClient) -> None:
-        self.client = client
+    def __init__(
+        self, telegram_client: TelegramClient, webapp_client: WebappClient
+    ) -> None:
+        self.telegram_client = telegram_client
+        self.webapp_client = webapp_client
         self.context = BotContext()
 
     async def start(self) -> None:
-        # await self.set_my_commands()  # TODO: enable
+        await self.set_my_commands()  # TODO: enable
         await self.run_polling_loop()
 
     async def set_my_commands(self) -> None:
@@ -39,13 +43,13 @@ class Bot:
                     "description": handler.short_description,
                 }
             )
-        await self.client.set_my_commands(commands)
+        await self.telegram_client.set_my_commands(commands)
 
     async def run_polling_loop(self) -> None:
         logger.info("Starting the polling loop")
         while True:
             try:
-                updates = await self.client.get_updates()
+                updates = await self.telegram_client.get_updates()
             except KeyboardInterrupt:
                 logger.info("Exiting...")
                 return
@@ -89,7 +93,7 @@ class Bot:
 
         handler_class = CommandHandlerRegistry.get_for_callback_type(callback_type)
         if handler_class:
-            handler = handler_class(self.client, self.context)
+            handler = handler_class(self.telegram_client, self.context)
             await handler.process_callback(callback)
 
     async def process_command_message(self, message: Message, command: Command) -> bool:
@@ -106,16 +110,16 @@ class Bot:
 
         handler_class = CommandHandlerRegistry.get_for_command_str(command.command_str)
         if not handler_class:
-            await self.client.reply(
+            await self.telegram_client.reply(
                 message, f"Unrecognized command: {command.command_str}"
             )
             return False
 
-        handler = handler_class(self.client, self.context)
+        handler = handler_class(self.telegram_client, self.webapp_client, self.context)
         try:
             handler.validate(command)
         except ValidationError as exc:
-            await self.client.reply(message, exc.message)
+            await self.telegram_client.reply(message, exc.message)
             return True
 
         await handler.process(message)

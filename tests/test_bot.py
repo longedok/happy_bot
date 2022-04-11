@@ -125,14 +125,14 @@ class TestBot:
     def test_ping(self, bot):
         new_message(bot, "/ping")
 
-        message, text = get_response(bot.client)
+        message, text = get_response(bot.telegram_client)
         assert message.chat.id == CHAT_ID
         assert text == "pong"
 
     def test_help(self, bot):
         new_message(bot, "/help")
 
-        message, text = get_response(bot.client)
+        message, text = get_response(bot.telegram_client)
         assert message.chat.id == CHAT_ID
         assert text == HelpHandler.HELP
 
@@ -140,13 +140,13 @@ class TestBot:
         bot.USERNAME = "happy_mj_bot"
         new_message(bot, "/ping@happy_mj_bot")
 
-        message, text = get_response(bot.client)
+        message, text = get_response(bot.telegram_client)
         assert message.chat.id == CHAT_ID
         assert text == "pong"
 
     def test_invalid_command(self, bot):
         new_message(bot, "/invalid")
 
-        message, text = get_response(bot.client)
+        message, text = get_response(bot.telegram_client)
         assert message.chat.id == CHAT_ID
         assert "unrecognized command" in text.lower()

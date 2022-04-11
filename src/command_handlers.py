@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import os
+import uuid
 from logging import getLogger
 from typing import TYPE_CHECKING, Type
 
 from entities import Message
-from telegram_client import Client
+from telegram_client import TelegramClient
+from webapp_client import WebappClient
 
 if TYPE_CHECKING:
     from bot_context import BotContext
@@ -49,8 +52,14 @@ class CommandHandler(metaclass=CommandHandlerRegistry):
     validator_class: Type[Validator] | None = None
     validator: Validator | None
 
-    def __init__(self, client: Client, context: BotContext) -> None:
-        self.client = client
+    def __init__(
+        self,
+        telegram_client: TelegramClient,
+        webapp_client: WebappClient,
+        context: BotContext,
+    ) -> None:
+        self.telegram_client = telegram_client
+        self.webapp_client = webapp_client
         self.context = context
         if self.validator_class:
             self.validator = self.validator_class()
@@ -67,37 +76,34 @@ class CommandHandler(metaclass=CommandHandlerRegistry):
 
 class LinkHandler(CommandHandler):
     command_str = "link"
-    short_description = "Link your happiness-mj.xyz account."
+    short_description = "Link your happiness-mj.xyz account"
+
+    WEB_APP_LINKS_BASE = os.environ.get("WEBAPP_LINKS_BASE")
 
     async def process(self, message: Message) -> None:
-        pass
-
-
-class PingHandler(CommandHandler):
-    command_str = "ping"
-    short_description = 'Sends "pong" in response.'
-
-    async def process(self, message: Message) -> None:
-        await self.client.reply(message, f"pong")
-
-
-class GithubHandler(CommandHandler):
-    command_str = "github"
-    short_description = "Sends github link."
-
-    async def process(self, message: Message) -> None:
-        await self.client.reply(
+        token = uuid.uuid4()
+        result = await self.webapp_client.make_bot_token(str(token))
+        logger.debug("Token created %s", result)
+        url = result["url"]
+        await self.telegram_client.reply(
             message,
-            f"Coming soon...",
-            disable_web_page_preview=True,
+            f"Follow this url to link your account - {self.WEB_APP_LINKS_BASE}{url}",
         )
 
 
 class HelpHandler(CommandHandler):
     command_str = "help"
-    short_description = "Display help message."
+    short_description = "Get help on how to use the bot"
 
     HELP = """Happy bot."""
 
     async def process(self, message: Message) -> None:
-        await self.client.reply(message, self.HELP)
+        await self.telegram_client.reply(message, self.HELP)
+
+
+class PingHandler(CommandHandler):
+    command_str = "ping"
+    short_description = 'Test bot connectivity'
+
+    async def process(self, message: Message) -> None:
+        await self.telegram_client.reply(message, f"pong")

@@ -65,7 +65,7 @@ class APIResponse:
             self.response.raise_for_status()
 
 
-class Client:
+class TelegramClient:
     POLL_INTERVAL = 60
     DEFAULT_TIMEOUT = 5
 
