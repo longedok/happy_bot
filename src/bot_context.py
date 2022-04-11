@@ -24,4 +24,3 @@ class BotContext:
             "uptime": format_interval(self.get_uptime()),
             "version": self.version,
         }
-

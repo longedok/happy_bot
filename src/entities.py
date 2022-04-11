@@ -6,7 +6,6 @@ from dataclasses import dataclass, field
 from functools import cached_property
 from typing import Any
 
-
 logger = logging.getLogger(__name__)
 
 

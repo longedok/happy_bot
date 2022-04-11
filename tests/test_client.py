@@ -1,7 +1,6 @@
 import pytest
+from client import BASE_URL, TelegramClient
 from requests.exceptions import Timeout
-
-from client import BASE_URL, Client
 
 CHAT_ID = -593555199
 

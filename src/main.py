@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
-import logging
 import asyncio
+import logging
 
 import aioredis
 
 from bot import Bot
-from client import Client
 from pubsub import RedisPubSub
+from telegram_client import Client
 from utils.logging import CustomFormatter
 
 

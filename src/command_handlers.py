@@ -3,8 +3,8 @@ from __future__ import annotations
 from logging import getLogger
 from typing import TYPE_CHECKING, Type
 
-from client import Client
 from entities import Message
+from telegram_client import Client
 
 if TYPE_CHECKING:
     from bot_context import BotContext
@@ -49,9 +49,7 @@ class CommandHandler(metaclass=CommandHandlerRegistry):
     validator_class: Type[Validator] | None = None
     validator: Validator | None
 
-    def __init__(
-        self, client: Client, context: BotContext
-    ) -> None:
+    def __init__(self, client: Client, context: BotContext) -> None:
         self.client = client
         self.context = context
         if self.validator_class:
@@ -85,7 +83,7 @@ class PingHandler(CommandHandler):
 
 class GithubHandler(CommandHandler):
     command_str = "github"
-    short_description = 'Sends github link.'
+    short_description = "Sends github link."
 
     async def process(self, message: Message) -> None:
         await self.client.reply(

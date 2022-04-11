@@ -7,12 +7,12 @@ from typing import TYPE_CHECKING
 
 from bot_context import BotContext
 from command_handlers import CommandHandlerRegistry
-from entities import CallbackQuery, Message, Command
+from entities import CallbackQuery, Command, Message
 from exceptions import ValidationError
 
 if TYPE_CHECKING:
-    from telegram_client import Client as TelegramClient
     from entities import ForwardFromChat
+    from telegram_client import Client as TelegramClient
 
 logger = logging.getLogger(__name__)
 
@@ -106,7 +106,9 @@ class Bot:
 
         handler_class = CommandHandlerRegistry.get_for_command_str(command.command_str)
         if not handler_class:
-            await self.client.reply(message, f"Unrecognized command: {command.command_str}")
+            await self.client.reply(
+                message, f"Unrecognized command: {command.command_str}"
+            )
             return False
 
         handler = handler_class(self.client, self.context)
@@ -121,7 +123,9 @@ class Bot:
         return True
 
     async def process_forward_message(
-        self, message: Message, forward_from_chat: ForwardFromChat,
+        self,
+        message: Message,
+        forward_from_chat: ForwardFromChat,
     ) -> bool:
         return False
 

@@ -9,9 +9,8 @@ from typing import TYPE_CHECKING, Iterable, cast
 from .formatting import format_interval
 
 if TYPE_CHECKING:
-    from sqlalchemy.orm import Query
-
     from db import MessageRecord
+    from sqlalchemy.orm import Query
 
 
 class Table:

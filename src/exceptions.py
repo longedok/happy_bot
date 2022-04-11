@@ -8,4 +8,3 @@ class ValidationError(Exception):
 
 class TelegramAPIError(Exception):
     pass
-

@@ -5,8 +5,8 @@ import os
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, cast
 
-import requests
 import httpx
+import requests
 from requests.exceptions import Timeout
 
 if TYPE_CHECKING:
