@@ -2,8 +2,9 @@
 from __future__ import annotations
 
 import logging
+import asyncio
 
-from redis import Redis
+import aioredis
 
 from bot import Bot
 from client import Client
@@ -22,18 +23,21 @@ def init_logging() -> None:
         handler.setFormatter(CustomFormatter(handler.formatter._fmt))
 
 
-def main() -> None:
+async def main() -> None:
     init_logging()
 
     client = Client()
-    redis = Redis(host="redis", port=6379, db=0, encoding="utf8")
+    redis = aioredis.from_url("redis://redis", encoding="utf-8")
 
     pubsub = RedisPubSub(client, redis)
-    pubsub.start()
 
     bot = Bot(client)
-    bot.start()
+
+    await asyncio.gather(
+        bot.start(),
+        pubsub.run(),
+    )
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())

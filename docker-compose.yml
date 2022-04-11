@@ -9,6 +9,8 @@ services:
         restart: on-failure
         networks:
             - webnet
+        volumes:
+            - ./src/:/app/src/
 networks:
     webnet:
         name: happiness_webnet

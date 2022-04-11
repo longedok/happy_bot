@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, cast
 
 import requests
+import httpx
 from requests.exceptions import Timeout
 
 if TYPE_CHECKING:
@@ -85,19 +86,17 @@ class Client:
 
         return params
 
-    def _post(self, url: str, data: dict, **request_params: Any) -> APIResponse:
+    async def _post(self, url: str, data: dict, **request_params: Any) -> APIResponse:
         params = self._prepare_params(request_params)
 
-        try:
-            response = requests.post(url, json=data, **params)
-        except Timeout:
-            return APIResponse.from_timeout()
+        async with httpx.AsyncClient() as client:
+            response = await client.post(url, json=data, **params)
 
         api_response = APIResponse.from_response(response)
         logger.debug("POST response: %s", api_response)
         return api_response
 
-    def _get(
+    async def _get(
         self,
         url: str,
         params: dict[str, Any],
@@ -105,10 +104,8 @@ class Client:
     ) -> APIResponse:
         full_request_params = self._prepare_params(request_params)
 
-        try:
-            response = requests.get(url, params=params, **full_request_params)
-        except Timeout:
-            return APIResponse.from_timeout()
+        async with httpx.AsyncClient() as client:
+            response = await client.get(url, params=params, **full_request_params)
 
         return APIResponse.from_response(response)
 
@@ -116,8 +113,8 @@ class Client:
     def offset(self) -> int | None:
         return self.last_update_id + 1 if self.last_update_id else None
 
-    def get_updates(self) -> list[dict]:
-        response = self._get(
+    async def get_updates(self) -> list[dict]:
+        response = await self._get(
             f"{BASE_URL}/getUpdates",
             params={
                 "timeout": self.POLL_INTERVAL,
@@ -139,17 +136,17 @@ class Client:
 
         return cast(list, updates)
 
-    def reply(self, message: Message, text: str, **kwargs: Any) -> None:
+    async def reply(self, message: Message, text: str, **kwargs: Any) -> None:
         logger.debug("Replying to chat %s: %r", message.chat.id, text)
 
-        self.post_message(
+        await self.post_message(
             message.chat.id,
             text,
             reply_to_message_id=message.message_id,
             **kwargs,
         )
 
-    def post_message(
+    async def post_message(
         self,
         chat_id: int,
         text: str,
@@ -163,25 +160,25 @@ class Client:
         }
         body.update(extra_params)
 
-        return self._post(f"{BASE_URL}/sendMessage", body)
+        return await self._post(f"{BASE_URL}/sendMessage", body)
 
-    def delete_message(self, chat_id: int, message_id: int) -> APIResponse:
+    async def delete_message(self, chat_id: int, message_id: int) -> APIResponse:
         body = {
             "chat_id": chat_id,
             "message_id": message_id,
         }
 
-        return self._post(f"{BASE_URL}/deleteMessage", body)
+        return await self._post(f"{BASE_URL}/deleteMessage", body)
 
-    def send_chat_action(self, chat_id: int, action: str) -> APIResponse:
+    async def send_chat_action(self, chat_id: int, action: str) -> APIResponse:
         body = {
             "chat_id": chat_id,
             "action": action,
         }
 
-        return self._post(f"{BASE_URL}/sendChatAction", body)
+        return await self._post(f"{BASE_URL}/sendChatAction", body)
 
-    def edit_message_text(
+    async def edit_message_text(
         self,
         chat_id: int,
         message_id: int,
@@ -195,9 +192,9 @@ class Client:
         }
         body.update(extra_params)
 
-        return self._post(f"{BASE_URL}/editMessageText", body)
+        return await self._post(f"{BASE_URL}/editMessageText", body)
 
-    def answer_callback_query(
+    async def answer_callback_query(
         self,
         callback_query_id: int,
         **extra_params: Any,
@@ -207,7 +204,7 @@ class Client:
         }
         body.update(extra_params)
 
-        return self._post(f"{BASE_URL}/answerCallbackQuery", body)
+        return await self._post(f"{BASE_URL}/answerCallbackQuery", body)
 
-    def set_my_commands(self, commands: list[dict[str, str]]) -> APIResponse:
-        return self._post(f"{BASE_URL}/setMyCommands", {"commands": commands})
+    async def set_my_commands(self, commands: list[dict[str, str]]) -> APIResponse:
+        return await self._post(f"{BASE_URL}/setMyCommands", {"commands": commands})

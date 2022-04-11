@@ -9,10 +9,10 @@ publish:
 	docker push longedok/happy_bot
 
 run:
-	docker-compose -f docker-compose-dev.yml up -d --build --no-deps --force-recreate bot
+	docker-compose up -d --build --no-deps --force-recreate bot
 
 up:
-	docker-compose -f docker-compose-dev.yml up
+	docker-compose up
 
 test:
 	pytest

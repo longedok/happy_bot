@@ -59,7 +59,7 @@ class CommandHandler(metaclass=CommandHandlerRegistry):
         else:
             self.validator = None
 
-    def process(self, message: Message) -> None:
+    async def process(self, message: Message) -> None:
         raise NotImplementedError
 
     def validate(self, command: Command) -> None:
@@ -67,20 +67,28 @@ class CommandHandler(metaclass=CommandHandlerRegistry):
             self.validator.validate(command)
 
 
+class LinkHandler(CommandHandler):
+    command_str = "link"
+    short_description = "Link your happiness-mj.xyz account."
+
+    async def process(self, message: Message) -> None:
+        pass
+
+
 class PingHandler(CommandHandler):
     command_str = "ping"
     short_description = 'Sends "pong" in response.'
 
-    def process(self, message: Message) -> None:
-        self.client.reply(message, f"pong")
+    async def process(self, message: Message) -> None:
+        await self.client.reply(message, f"pong")
 
 
 class GithubHandler(CommandHandler):
     command_str = "github"
     short_description = 'Sends github link.'
 
-    def process(self, message: Message) -> None:
-        self.client.reply(
+    async def process(self, message: Message) -> None:
+        await self.client.reply(
             message,
             f"Coming soon...",
             disable_web_page_preview=True,
@@ -93,5 +101,5 @@ class HelpHandler(CommandHandler):
 
     HELP = """Happy bot."""
 
-    def process(self, message: Message) -> None:
-        self.client.reply(message, self.HELP)
+    async def process(self, message: Message) -> None:
+        await self.client.reply(message, self.HELP)

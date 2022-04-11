@@ -8,6 +8,8 @@ authors = ["Yauheni Kartavykh <longedok@gmail.com>"]
 python = "^3.9"
 requests = "^2.27.1"
 redis = "^4.2.0"
+httpx = "^0.22.0"
+aioredis = {version = "^2.0.1", extras = ["hiredis"]}
 
 [tool.poetry.dev-dependencies]
 mypy = "^0.800"
