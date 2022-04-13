@@ -29,7 +29,7 @@ class Bot:
         self.context = BotContext()
 
     async def start(self) -> None:
-        await self.set_my_commands()  # TODO: enable
+        # await self.set_my_commands()  # TODO: enable
         await self.run_polling_loop()
 
     async def set_my_commands(self) -> None:

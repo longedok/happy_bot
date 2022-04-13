@@ -2,10 +2,15 @@ from __future__ import annotations
 
 import os
 import uuid
+from datetime import datetime, timedelta
 from logging import getLogger
 from typing import TYPE_CHECKING, Type
 
+from sqlalchemy import select
+
+from db import async_session
 from entities import Message
+from models import UserOrm, ChatOrm
 from telegram_client import TelegramClient
 from webapp_client import WebappClient
 
@@ -81,8 +86,35 @@ class LinkHandler(CommandHandler):
     WEB_APP_LINKS_BASE = os.environ.get("WEBAPP_LINKS_BASE")
 
     async def process(self, message: Message) -> None:
-        token = uuid.uuid4()
-        result = await self.webapp_client.make_bot_token(str(token))
+        if message.chat.type != "private":
+            return
+
+        async with async_session() as session:
+            query = select(UserOrm).where(UserOrm.telegram_id == message.from_.id)
+            result = await session.execute(query)
+            if not (user := result.scalars().first()):
+                user = UserOrm(
+                    telegram_id=message.from_.id,
+                    token=str(uuid.uuid4()),
+                    token_expires_at=datetime.now() + timedelta(seconds=1800),
+                )
+                chat = ChatOrm(
+                    user=user, telegram_id=message.chat.id, type="private"
+                )
+                session.add_all([user, chat])
+            if user.token_expires_at > datetime.now():
+                user.token_expires_at = datetime.now() + timedelta(seconds=1800)
+                session.add(user)
+            await session.commit()
+
+        if user.is_active:
+            await self.telegram_client.reply(
+                message,
+                f"Your account is already linked. You're all set up!"
+            )
+            return
+
+        result = await self.webapp_client.make_bot_token(user.token)
         logger.debug("Token created %s", result)
         url = result["url"]
         await self.telegram_client.reply(

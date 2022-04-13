@@ -11,6 +11,7 @@ from pubsub import RedisPubSub
 from telegram_client import TelegramClient
 from utils.logging import CustomFormatter
 from webapp_client import WebappClient
+from db import create_db
 
 
 def init_logging() -> None:
@@ -22,10 +23,12 @@ def init_logging() -> None:
     logger = logging.getLogger()
     for handler in logger.root.handlers:  # type: ignore
         handler.setFormatter(CustomFormatter(handler.formatter._fmt))
+    logging.getLogger("sqlalchemy.engine").setLevel(logging.INFO)
 
 
 async def main() -> None:
     init_logging()
+    await create_db()
 
     telegram_client = TelegramClient()
     webapp_client = WebappClient()

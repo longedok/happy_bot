@@ -34,6 +34,25 @@ class Chat:
 
 
 @dataclass
+class User:
+    id: int
+    is_bot: bool
+    first_name: str | None
+    username: str | None
+    language_code: str | None
+
+    @classmethod
+    def from_json(cls, user_json: dict) -> User:
+        return User(
+            id=user_json["id"],
+            is_bot=user_json["is_bot"],
+            first_name=user_json.get("first_name"),
+            username=user_json.get("username"),
+            language_code=user_json.get("language_code"),
+        )
+
+
+@dataclass
 class ForwardFromChat:
     id: int
     title: str | None = field(repr=False)
@@ -41,11 +60,11 @@ class ForwardFromChat:
     type: str = field(repr=False)
 
     @classmethod
-    def from_json(cls, forwrad_from_chat_json: dict) -> ForwardFromChat:
-        chat_id = forwrad_from_chat_json["id"]
-        title = forwrad_from_chat_json.get("title")
-        username = forwrad_from_chat_json.get("username")
-        chat_type = forwrad_from_chat_json["type"]
+    def from_json(cls, forward_from_chat_json: dict) -> ForwardFromChat:
+        chat_id = forward_from_chat_json["id"]
+        title = forward_from_chat_json.get("title")
+        username = forward_from_chat_json.get("username")
+        chat_type = forward_from_chat_json["type"]
         return cls(chat_id, title, username, chat_type)
 
 
@@ -67,6 +86,7 @@ class Entity:
 class Message:
     text: str | None
     message_id: int
+    from_: User
     chat: Chat
     date: int
     entities: list[Entity]
@@ -77,6 +97,7 @@ class Message:
         text = message_json.get("text")
         message_id = message_json["message_id"]
         chat = Chat.from_json(message_json["chat"])
+        from_ = User.from_json(message_json["from"])
         date = message_json["date"]
 
         entities_json = message_json.get("entities", [])
@@ -87,11 +108,17 @@ class Message:
 
         forward_from_chat = None
         if "forward_from_chat" in message_json:
-            forward_from_chat = ForwardFromChat.from_json(
-                message_json["forward_from_chat"]
-            )
+            forward_from_chat = ForwardFromChat.from_json(message_json["forward_from_chat"])
 
-        return cls(text, message_id, chat, date, entities, forward_from_chat)
+        return cls(
+            text=text,
+            message_id=message_id,
+            from_=from_,
+            chat=chat,
+            date=date,
+            entities=entities,
+            forward_from_chat=forward_from_chat,
+        )
 
     @cached_property
     def command(self) -> Command | None:

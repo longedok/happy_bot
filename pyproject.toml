@@ -11,6 +11,8 @@ redis = "^4.2.0"
 httpx = "^0.22.0"
 aioredis = {version = "^2.0.1", extras = ["hiredis"]}
 SQLAlchemy = "^1.4.35"
+asyncpg = "^0.25.0"
+psycopg2 = "^2.9.3"
 
 [tool.poetry.dev-dependencies]
 mypy = "^0.800"

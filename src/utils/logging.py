@@ -34,5 +34,5 @@ class CustomFormatter(logging.Formatter):
 
     def format(self, record: LogRecord) -> str:
         record.name = self._shorten_module_name(record.name)
-        record.args = self._redact_logging_args(record.args)
+        # record.args = self._redact_logging_args(record.args)
         return super().format(record)

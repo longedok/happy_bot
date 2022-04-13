@@ -8,7 +8,7 @@ WORKDIR /app
 
 FROM base as builder
 
-RUN apk --no-cache add gcc musl-dev libffi-dev openssl-dev
+RUN apk --no-cache add gcc musl-dev libffi-dev openssl-dev g++
 RUN apk --no-cache add curl \
 	&& curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 ENV PATH=/root/.cargo/bin:$PATH
