@@ -1,6 +1,6 @@
 import os
 from asyncio import current_task
-from contextlib import asynccontextmanager, AbstractAsyncContextManager
+from contextlib import AbstractAsyncContextManager, asynccontextmanager
 from logging import getLogger
 from typing import Callable
 

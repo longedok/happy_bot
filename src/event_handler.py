@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-import asyncio
-from asyncio import Semaphore, Task
 from datetime import datetime
 from logging import getLogger
 
 from pubsub import Event
 from repositories import UserRepository
+from task_manager import TaskManager
 from telegram_client import TelegramClient
 
 logger = getLogger(__name__)
@@ -22,21 +21,13 @@ class EventHandler:
     ) -> None:
         self.telegram_client = telegram_client
         self.user_repository = user_repository
-        self.tasks = set()
-        self.tasks_semaphore = Semaphore(self.MAX_PARALLEL_TASKS)
-
-    def _on_task_done(self, task: Task) -> None:
-        self.tasks.remove(task)
-        self.tasks_semaphore.release()
+        self.task_manager = TaskManager(self.MAX_PARALLEL_TASKS)
 
     async def handle(self, event: Event) -> None:
         logger.debug("Got new event %s", event)
 
         if handler := getattr(self, f"process_{event.type}", None):
-            await self.tasks_semaphore.acquire()
-            task = asyncio.create_task(handler(event))
-            self.tasks.add(task)
-            task.add_done_callback(self._on_task_done)
+            await self.task_manager.run_task(handler(event))
         else:
             logger.warning("No handler for event type %s", event.type)
 

@@ -7,13 +7,13 @@ from typing import TYPE_CHECKING
 
 from bot_context import BotContext
 from command_handlers import CommandHandlerRegistry
-from entities import CallbackQuery, Command, Message
+from entities import Command, Message
 from exceptions import ValidationError
 from repositories import UserRepository
+from task_manager import TaskManager
 from webapp_client import WebappClient
 
 if TYPE_CHECKING:
-    from entities import ForwardFromChat
     from telegram_client import TelegramClient as TelegramClient
 
 logger = logging.getLogger(__name__)
@@ -32,6 +32,7 @@ class Bot:
         self.webapp_client = webapp_client
         self.user_repository = user_repository
         self.context = BotContext()
+        self.task_manager = TaskManager()
 
     async def start(self) -> None:
         # await self.set_my_commands()  # TODO: enable
@@ -71,40 +72,14 @@ class Bot:
         if "message" in update:
             message = Message.from_json(update["message"])
             await self.process_message(message)
-        # elif "callback_query" in update:
-        #     callback = CallbackQuery.from_json(update["callback_query"])
-        #     await self.process_callback(callback)
 
     async def process_message(self, message: Message) -> None:
         logger.debug("New %s", message)
 
-        if forward_from_chat := message.forward_from_chat:
-            if await self.process_forward_message(message, forward_from_chat):
-                return
-        elif command := message.command:
-            if await self.process_command_message(message, command):
-                return
-        elif tags := message.get_tags():
-            if await self.process_tags(message, tags):
-                return
-
-    async def process_callback(self, callback: CallbackQuery) -> None:
-        logger.debug("New %s", callback)
-
-        callback_type = callback.data.get("type")
-        if callback_type is None:
-            logger.error("Received a CallbackQuery with wrong structure: %s", callback)
-            return
-
-        handler_class = CommandHandlerRegistry.get_for_callback_type(callback_type)
-        if handler_class:
-            handler = handler_class(
-                self.telegram_client,
-                self.webapp_client,
-                self.user_repository,
-                self.context,
-            )
-            await handler.process_callback(callback)
+        if command := message.command:
+            handler = self.process_command_message(message, command)
+            await self.task_manager.run_task(handler)
+            return None
 
     async def process_command_message(self, message: Message, command: Command) -> bool:
         if command.entity.offset != 0:
@@ -140,13 +115,3 @@ class Bot:
         await handler.process(message)
 
         return True
-
-    async def process_forward_message(
-        self,
-        message: Message,
-        forward_from_chat: ForwardFromChat,
-    ) -> bool:
-        return False
-
-    async def process_tags(self, message: Message, tags: list[str]) -> bool:
-        return False

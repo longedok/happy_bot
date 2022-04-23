@@ -23,7 +23,6 @@ logger = getLogger(__name__)
 
 class CommandHandlerRegistry(type):
     command_handlers: dict[str, Type[CommandHandler]] = {}
-    callback_handlers: dict[str, Type[CommandHandler]] = {}
 
     def __new__(
         mcs: Type[CommandHandlerRegistry], name: str, bases: tuple, dct: dict
@@ -31,17 +30,11 @@ class CommandHandlerRegistry(type):
         handler_cls: Type[CommandHandler] = super().__new__(mcs, name, bases, dct)
         if hasattr(handler_cls, "command_str"):
             mcs.command_handlers[handler_cls.command_str] = handler_cls
-        if hasattr(handler_cls, "callback_type"):
-            mcs.callback_handlers[handler_cls.callback_type] = handler_cls
         return cast(CommandHandlerRegistry, handler_cls)
 
     @classmethod
     def get_for_command_str(mcs, command_str: str) -> Type[CommandHandler] | None:
         return mcs.command_handlers.get(command_str)
-
-    @classmethod
-    def get_for_callback_type(mcs, callback_type: str) -> Type[CommandHandler] | None:
-        return mcs.callback_handlers.get(callback_type)
 
     @classmethod
     def get_public_handlers(mcs) -> list[Type[CommandHandler]]:
