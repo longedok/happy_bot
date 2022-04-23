@@ -4,13 +4,11 @@ import os
 import uuid
 from datetime import datetime, timedelta
 from logging import getLogger
-from typing import TYPE_CHECKING, Type
+from typing import TYPE_CHECKING, Type, cast
 
-from sqlalchemy import select
-
-from db import async_session
 from entities import Message
-from models import UserOrm, ChatOrm
+from models import ChatOrm, UserOrm
+from repositories import UserRepository
 from telegram_client import TelegramClient
 from webapp_client import WebappClient
 
@@ -27,26 +25,28 @@ class CommandHandlerRegistry(type):
     command_handlers: dict[str, Type[CommandHandler]] = {}
     callback_handlers: dict[str, Type[CommandHandler]] = {}
 
-    def __new__(cls, name, bases, dct) -> CommandHandlerRegistry:
-        handler_cls = super().__new__(cls, name, bases, dct)
+    def __new__(
+        mcs: Type[CommandHandlerRegistry], name: str, bases: tuple, dct: dict
+    ) -> CommandHandlerRegistry:
+        handler_cls: Type[CommandHandler] = super().__new__(mcs, name, bases, dct)
         if hasattr(handler_cls, "command_str"):
-            cls.command_handlers[handler_cls.command_str] = handler_cls
+            mcs.command_handlers[handler_cls.command_str] = handler_cls
         if hasattr(handler_cls, "callback_type"):
-            cls.callback_handlers[handler_cls.callback_type] = handler_cls
-        return handler_cls
+            mcs.callback_handlers[handler_cls.callback_type] = handler_cls
+        return cast(CommandHandlerRegistry, handler_cls)
 
     @classmethod
-    def get_for_command_str(cls, command_str: str) -> Type[CommandHandler] | None:
-        return cls.command_handlers.get(command_str)
+    def get_for_command_str(mcs, command_str: str) -> Type[CommandHandler] | None:
+        return mcs.command_handlers.get(command_str)
 
     @classmethod
-    def get_for_callback_type(cls, callback_type: str) -> Type[CommandHandler] | None:
-        return cls.callback_handlers.get(callback_type)
+    def get_for_callback_type(mcs, callback_type: str) -> Type[CommandHandler] | None:
+        return mcs.callback_handlers.get(callback_type)
 
     @classmethod
-    def get_public_handlers(cls) -> list[Type[CommandHandler]]:
+    def get_public_handlers(mcs) -> list[Type[CommandHandler]]:
         handlers = []
-        for handler_class in cls.command_handlers.values():
+        for handler_class in mcs.command_handlers.values():
             if getattr(handler_class, "short_description", None):
                 handlers.append(handler_class)
 
@@ -61,11 +61,13 @@ class CommandHandler(metaclass=CommandHandlerRegistry):
         self,
         telegram_client: TelegramClient,
         webapp_client: WebappClient,
+        user_repository: UserRepository,
         context: BotContext,
     ) -> None:
         self.telegram_client = telegram_client
         self.webapp_client = webapp_client
         self.context = context
+        self.user_repository = user_repository
         if self.validator_class:
             self.validator = self.validator_class()
         else:
@@ -79,43 +81,63 @@ class CommandHandler(metaclass=CommandHandlerRegistry):
             self.validator.validate(command)
 
 
+def _get_date_from_seconds(seconds: int):
+    return datetime.now() + timedelta(seconds=seconds)
+
+
 class LinkHandler(CommandHandler):
     command_str = "link"
     short_description = "Link your happiness-mj.xyz account"
 
     WEB_APP_LINKS_BASE = os.environ.get("WEBAPP_LINKS_BASE")
+    TOKEN_EXPIRATION_SECONDS = 1800  # 30 MIN
+
+    async def _get_or_create_user_with_chat(
+        self,
+        user_telegram_id: int,
+        chat_telegram_id: int,
+    ) -> UserOrm:
+        to_update = set()
+        if not (
+            user := await self.user_repository.get_by_telegram_id(user_telegram_id)
+        ):
+            user = UserOrm(
+                telegram_id=user_telegram_id,
+                token=str(uuid.uuid4()),
+                token_expires_at=_get_date_from_seconds(self.TOKEN_EXPIRATION_SECONDS),
+            )
+            chat = ChatOrm(user=user, telegram_id=chat_telegram_id, type="private")
+            to_update.update([user, chat])
+
+        if user.token_expires_at > datetime.now():
+            user.token_expires_at = _get_date_from_seconds(
+                self.TOKEN_EXPIRATION_SECONDS
+            )
+            to_update.add(user)
+
+        await self.user_repository.update_all(*to_update)
+
+        return user
 
     async def process(self, message: Message) -> None:
         if message.chat.type != "private":
-            return
+            await self.telegram_client.reply(
+                message, f"This command is only available in private chats."
+            )
 
-        async with async_session() as session:
-            query = select(UserOrm).where(UserOrm.telegram_id == message.from_.id)
-            result = await session.execute(query)
-            if not (user := result.scalars().first()):
-                user = UserOrm(
-                    telegram_id=message.from_.id,
-                    token=str(uuid.uuid4()),
-                    token_expires_at=datetime.now() + timedelta(seconds=1800),
-                )
-                chat = ChatOrm(
-                    user=user, telegram_id=message.chat.id, type="private"
-                )
-                session.add_all([user, chat])
-            if user.token_expires_at > datetime.now():
-                user.token_expires_at = datetime.now() + timedelta(seconds=1800)
-                session.add(user)
-            await session.commit()
+        user = await self._get_or_create_user_with_chat(
+            message.from_.id, message.chat.id
+        )
 
         if user.is_active:
             await self.telegram_client.reply(
-                message,
-                f"Your account is already linked. You're all set up!"
+                message, f"Your account is already linked. You're all set up!"
             )
-            return
+            return None
 
         result = await self.webapp_client.make_bot_token(user.token)
         logger.debug("Token created %s", result)
+
         url = result["url"]
         await self.telegram_client.reply(
             message,
@@ -135,7 +157,7 @@ class HelpHandler(CommandHandler):
 
 class PingHandler(CommandHandler):
     command_str = "ping"
-    short_description = 'Test bot connectivity'
+    short_description = "Test bot connectivity"
 
     async def process(self, message: Message) -> None:
         await self.telegram_client.reply(message, f"pong")

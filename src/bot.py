@@ -9,6 +9,7 @@ from bot_context import BotContext
 from command_handlers import CommandHandlerRegistry
 from entities import CallbackQuery, Command, Message
 from exceptions import ValidationError
+from repositories import UserRepository
 from webapp_client import WebappClient
 
 if TYPE_CHECKING:
@@ -22,10 +23,14 @@ class Bot:
     USERNAME = os.environ.get("BOT_USERNAME", "gcservantbot")
 
     def __init__(
-        self, telegram_client: TelegramClient, webapp_client: WebappClient
+        self,
+        telegram_client: TelegramClient,
+        webapp_client: WebappClient,
+        user_repository: UserRepository,
     ) -> None:
         self.telegram_client = telegram_client
         self.webapp_client = webapp_client
+        self.user_repository = user_repository
         self.context = BotContext()
 
     async def start(self) -> None:
@@ -93,7 +98,12 @@ class Bot:
 
         handler_class = CommandHandlerRegistry.get_for_callback_type(callback_type)
         if handler_class:
-            handler = handler_class(self.telegram_client, self.context)
+            handler = handler_class(
+                self.telegram_client,
+                self.webapp_client,
+                self.user_repository,
+                self.context,
+            )
             await handler.process_callback(callback)
 
     async def process_command_message(self, message: Message, command: Command) -> bool:
@@ -115,7 +125,12 @@ class Bot:
             )
             return False
 
-        handler = handler_class(self.telegram_client, self.webapp_client, self.context)
+        handler = handler_class(
+            self.telegram_client,
+            self.webapp_client,
+            self.user_repository,
+            self.context,
+        )
         try:
             handler.validate(command)
         except ValidationError as exc:

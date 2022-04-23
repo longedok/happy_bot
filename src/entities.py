@@ -108,7 +108,9 @@ class Message:
 
         forward_from_chat = None
         if "forward_from_chat" in message_json:
-            forward_from_chat = ForwardFromChat.from_json(message_json["forward_from_chat"])
+            forward_from_chat = ForwardFromChat.from_json(
+                message_json["forward_from_chat"]
+            )
 
         return cls(
             text=text,

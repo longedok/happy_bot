@@ -4,14 +4,13 @@ from __future__ import annotations
 import asyncio
 import logging
 
-import aioredis
+from dependency_injector.wiring import Provide, inject
 
 from bot import Bot
+from containers import Container
+from db import Database
 from pubsub import RedisPubSub
-from telegram_client import TelegramClient
 from utils.logging import CustomFormatter
-from webapp_client import WebappClient
-from db import create_db
 
 
 def init_logging() -> None:
@@ -26,23 +25,20 @@ def init_logging() -> None:
     logging.getLogger("sqlalchemy.engine").setLevel(logging.INFO)
 
 
-async def main() -> None:
+@inject
+async def main(
+    bot: Bot = Provide[Container.bot],
+    db: Database = Provide[Container.db],
+    redis_pubsub: RedisPubSub = Provide[Container.redis_pubsub],
+) -> None:
     init_logging()
-    await create_db()
-
-    telegram_client = TelegramClient()
-    webapp_client = WebappClient()
-    redis = aioredis.from_url("redis://redis", encoding="utf-8")
-
-    pubsub = RedisPubSub(telegram_client, redis)
-
-    bot = Bot(telegram_client, webapp_client)
-
-    await asyncio.gather(
-        bot.start(),
-        pubsub.run(),
-    )
+    await db.create_database()
+    await asyncio.gather(bot.start(), redis_pubsub.run())
 
 
 if __name__ == "__main__":
+    container = Container()
+    container.init_resources()
+    container.wire(modules=[__name__])
+
     asyncio.run(main())

@@ -1,4 +1,6 @@
-from sqlalchemy import Column, Integer, BigInteger, String, ForeignKey, DateTime, func
+from __future__ import annotations
+
+from sqlalchemy import BigInteger, Column, DateTime, ForeignKey, Integer, String, func
 from sqlalchemy.orm import declarative_base, relationship
 
 Base = declarative_base()
@@ -24,6 +26,10 @@ class UserOrm(Base):
     @property
     def is_active(self) -> bool:
         return self.activated_at is not None
+
+    @property
+    def chat(self) -> ChatOrm:
+        return self.chats[0]
 
     def __repr__(self) -> str:
         return f"UserOrm(id={self.id!r}, telegram_id={self.telegram_id!r})"
