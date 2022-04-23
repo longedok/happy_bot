@@ -117,6 +117,7 @@ class LinkHandler(CommandHandler):
             await self.telegram_client.reply(
                 message, f"This command is only available in private chats."
             )
+            return None
 
         user = await self._get_or_create_user_with_chat(
             message.from_.id, message.chat.id
